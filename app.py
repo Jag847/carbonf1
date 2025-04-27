@@ -179,7 +179,7 @@ def plot_gauge(current_value, category, safe_limit):
     )
     fig.update_layout(
         margin = {'t': 40, 'b': 0, 'l': 0, 'r': 0},
-        height=300
+        height=300,
         transition = {'duration': 1000, 'easing': 'cubic-in-out'}
     )
     return fig
