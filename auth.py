@@ -10,20 +10,20 @@ def main():
 
     with tab_login:
         st.subheader("Login")
-        email = st.text_input("Gmail", key="login_email")
+        name = st.text_input("Name", key="login_name")
         password = st.text_input("Password", type="password", key="login_password")
         if st.button("Login"):
-            if email and password:
-                user = authenticate(email, password)
+            if name and password:
+                user = authenticate(name, password)
                 if user:
                     st.success(f"Welcome {user.name}! You have logged in successfully.")
                     st.session_state["user_id"] = user.id
                     st.session_state["username"] = user.name
                     st.session_state["logged_in"] = True
                 else:
-                    st.error("Invalid email or password")
+                    st.error("Invalid usermame or password")
             else:
-                st.error("Please enter both email and password")
+                st.error("Please enter both username and password")
 
     with tab_signup:
         st.subheader("Sign Up")
@@ -67,8 +67,8 @@ def login():
       name = st.text_input("Name", key="login_name")          
       password = st.text_input("Password", type="password", key="login_password")
       if st.button("Login"):
-            if email and password:
-                user = authenticate(email, password)
+            if name and password:
+                user = authenticate(name, password)
                 if user:
                     st.session_state.user_id = user.id
                     st.session_state.username = user.name
