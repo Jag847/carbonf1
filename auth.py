@@ -66,7 +66,7 @@ def login():
     with tab_login:
       name = st.text_input("Name", key="login_name")          
       password = st.text_input("Password", type="password", key="login_password")
-        if st.button("Login"):
+      if st.button("Login"):
             if email and password:
                 user = authenticate(email, password)
                 if user:
