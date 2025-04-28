@@ -26,6 +26,20 @@ MONTHS = [
     "July","August","September","October","November","December"
 ]
 
+st.markdown("""
+    <style>
+    .blink {
+        animation: blinker 1.5s linear infinite;
+        color: red;
+        font-weight: bold;
+    }
+    @keyframes blinker {
+        50% { opacity: 0; }
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+
 # Centering + Card Shadow styling
 st.markdown("""
     <style>
@@ -39,6 +53,18 @@ st.markdown("""
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);  /* Soft card shadow */
+        margin-bottom: 20px;
+    }
+    .centered-red {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 10px;
+        background: #ffe6e6; /* light red */
+        border-radius: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         margin-bottom: 20px;
     }
     </style>
@@ -151,16 +177,17 @@ def log_emission(category, facility, year, month, value):
 def plot_gauge(current_value, category, safe_limit):
     icon = CATEGORY_ICONS.get(category, "🌍")  # default globe if not found
     title_text = f"{icon} {category}"
+    color = "green" if current_value <= safe_limit else "red"
     fig = go.Figure(go.Indicator(
         mode = "gauge+number+delta",
         value = current_value,
         domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': category, 'font': {'size': 20}},
+        title = {'text': f"{icon} {category}" , 'font': {'size': 20}},
         number = {'suffix': " kg CO₂", 'font': {'size': 18}},
         delta = {'reference': safe_limit, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
         gauge = {
             'axis': {'range': [0, safe_limit * 1.5], 'tickwidth': 1, 'tickcolor': "darkblue"},
-            'bar': {'color': "darkblue"},
+            'bar': {'color': color},
             'steps': [
                 {'range': [0, safe_limit], 'color': "lightgreen"},
                 {'range': [safe_limit, safe_limit*1.5], 'color': "salmon"},
@@ -457,7 +484,8 @@ elif menu == "Carbon Metre":
         for idx, (category, emission) in enumerate(category_totals.items()):
             with columns[idx % 3]:
                 with st.container():
-                    st.markdown('<div class="centered">', unsafe_allow_html=True)
+                    card_class = "centered" if emission <= SAFE_LIMITS[category] else "centered-red"
+                    st.markdown(f'<div class="{card_class}">', unsafe_allow_html=True)
                     fig = plot_gauge(emission, category, SAFE_LIMITS[category])
                     st.plotly_chart(fig, use_container_width=True)
                     custom_progress_bar(emission, SAFE_LIMITS[category])
@@ -466,7 +494,8 @@ elif menu == "Carbon Metre":
                         st.success(f"✅ {category} emissions within limits.")
                     else:
                         excess = emission - SAFE_LIMITS[category]
-                        st.error(f"🚨 Exceeded {excess/1000:.2f} tons in {category} emissions.")
+                        st.markdown(f"<span class='blink'>🚨 Exceeded {excess/1000:.2f} tons in {category} emissions.</span>", unsafe_allow_html=True)
+
                     st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("Please select a facility, month, and valid year.")
