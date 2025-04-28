@@ -578,8 +578,11 @@ elif menu == "Emission Analysis":
         else:
             st.info("Please select a facility, year, and month to view emissions.")
     
+
 elif menu == "Year and Facility Analysis":
     st.header("Year and Facility Analysis")
+    
+    # Fetch records
     records = db.query(Emission).filter(Emission.user_id==user.id).all()
     df = pd.DataFrame([{
         "Year": rec.date.year,
@@ -635,47 +638,50 @@ elif menu == "Year and Facility Analysis":
             title="<b>Facility-wise Emission by Category (Multiple Years)</b>"
         )
         st.plotly_chart(fig_fac, use_container_width=True)
+
         ### 3️⃣ Comparison between Selected Years for a Facility
         st.subheader("🔄 Yearly Comparison for a Facility")
 
         col1, col2 = st.columns(2)
         with col1:
-            compare_facility = st.selectbox("Facility to Compare", FACILITIES, key="compare_facility")
+           compare_facility = st.selectbox("Facility to Compare", FACILITIES, key="compare_facility")
 
         with col2:
             available_years = sorted(df["Year"].unique())
             years_to_compare = st.multiselect(
                 "Select Years to Compare",
-                 available_years,
-                 default=[available_years[0]] if available_years else []
+                available_years,
+                default=[available_years[0]] if available_years else []
             )
 
         if compare_facility and years_to_compare:
             df_compare = df[(df["Facility"] == compare_facility) & (df["Year"].isin(years_to_compare))]
     
             if not df_compare.empty:
-               df_compare = df_compare.groupby(["Year", "Month"]).sum().reset_index()
-               month_order = ["January","February","March","April","May","June","July","August","September","October","November","December"]
-               df_compare["Month"] = pd.Categorical(df_compare["Month"], categories=month_order, ordered=True)
-               df_compare = df_compare.sort_values("Month")
- 
-               fig_compare = px.line(
-                  df_compare,
-                  x="Month",
-                  y="Emission",
-                 color="Year",
-                 markers=True,
-                 title=f"<b>Emission Comparison for {compare_facility}: {', '.join(map(str, years_to_compare))}</b>",
-                 line_shape="spline"
-               )
-               fig_compare.update_layout(
-                  plot_bgcolor="white",
-                  xaxis=dict(categoryorder="array", categoryarray=month_order),
-                  yaxis_title="Emission (kg CO₂)"
-               )
-               st.plotly_chart(fig_compare, use_container_width=True)
+                df_compare = df_compare.groupby(["Year", "Month"]).sum().reset_index()
+                month_order = ["January","February","March","April","May","June","July","August","September","October","November","December"]
+                df_compare["Month"] = pd.Categorical(df_compare["Month"], categories=month_order, ordered=True)
+                df_compare = df_compare.sort_values("Month")
+
+                fig_compare = px.line(
+                    df_compare,
+                    x="Month",
+                    y="Emission",
+                    color="Year",
+                    markers=True,
+                    title=f"<b>Emission Comparison for {compare_facility}: {', '.join(map(str, years_to_compare))}</b>",
+                    line_shape="spline"
+                )
+                fig_compare.update_layout(
+                    plot_bgcolor="white",
+                    xaxis=dict(categoryorder="array", categoryarray=month_order),
+                    yaxis_title="Emission (kg CO₂)"
+                )
+                st.plotly_chart(fig_compare, use_container_width=True)
             else:
                 st.warning("No emission data found for selected years and facility.")
+
+           
 
 elif menu == "Download":
     st.header("Download Reports")
