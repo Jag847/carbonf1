@@ -10,7 +10,7 @@ import plotly.express as px
 import plotly.io as pio
 import io, zipfile
 import plotly.graph_objects as go
-
+from streamlit_animated_number import animated_number
 FACILITIES = [
     "Residential Areas",
     "Hostels",
@@ -471,69 +471,113 @@ elif menu == "Carbon Metre":
     else:
         st.info("Please select a facility, month, and valid year.")
 
+
+
 elif menu == "Emission Analysis":
-    emissions = {
-        "Fossil Fuels": float(st.session_state.get("Fossil Fuels Emission", 0.0)),
-        "Fugitive": float(st.session_state.get("Fugitive Emission", 0.0)),
-        "Electricity": float(st.session_state.get("Electricity Emission", 0.0)),
-        "Water": float(st.session_state.get("Water Emission", 0.0)),
-        "Waste": float(st.session_state.get("Waste Emission", 0.0)),
-        "Travel": float(st.session_state.get("Travel Emission", 0.0))
-    }
-    offset = float(st.session_state.get("Offset Emission", 0.0))
-    total_emission = sum(emissions.values())
-    net_emission = total_emission - offset
-    st.subheader("Emissions Breakdown")
-    for category, value in emissions.items():
-        st.write(f"**{category}:** {value:.2f} kg CO₂e")
-    st.subheader("Total Emission (before offset)")
-    st.write(f"**{total_emission:.2f} kg CO₂e**")
-    st.subheader("Offset")
-    st.write(f"**{offset:.2f} kg CO₂e**")
-    st.subheader("Net Emission")
-    st.success(f"**{net_emission:.2f} kg CO₂e**")
+    st.header("Emission Overview")
 
-    records = db.query(Emission).filter(Emission.user_id==user.id).all()
-    df_all = pd.DataFrame([{"Category": rec.category, "Emissions (kg CO₂)": rec.value} for rec in records])
-    if not df_all.empty:
-        summary = df_all.groupby("Category").sum().reset_index()
-        total = summary["Emissions (kg CO₂)"].sum()
-        st.dataframe(summary)
-        st.subheader(f"Total Carbon Footprint: {total:.2f} kg CO₂")
-        color_map = {
-            "Fossil Fuels": "#1f77b4",
-            "Fugitive": "#ff7f0e",
-            "Electricity": "#2ca02c",
-            "Water": "#d62728",
-            "Waste": "#9467bd",
-            "Travel": "#8c564b",
-        }
-        # Bar chart
-        fig_bar = px.bar(
-            summary,
-            x="Category",
-            y="Emissions (kg CO₂)",
-            color="Category",
-            color_discrete_map=color_map,
-            title="<b>Emissions by Category</b>",
-            template="plotly_white"
-        )
-        fig_bar.update_layout(xaxis=dict(tickmode="linear"), plot_bgcolor="rgba(0,0,0,0)", yaxis=dict(showgrid=False))
-        st.plotly_chart(fig_bar, use_container_width=True)
-        # Pie chart
-        fig_pie = px.pie(
-            summary,
-            values="Emissions (kg CO₂)",
-            names="Category",
-            title="Emission Contribution by Category",
-            color_discrete_sequence=px.colors.qualitative.Set3,
-            hole=0.4
-        )
-        st.subheader("🥧 Emissions Pie Chart")
-        st.plotly_chart(fig_pie, use_container_width=True)
+    # Fetch all emission records
+    records = db.query(Emission).filter(Emission.user_id == user.id).all()
+    df = pd.DataFrame([{
+        "Year": rec.date.year,
+        "Month": rec.date.strftime("%B"),
+        "Facility": rec.facility,
+        "Category": rec.category,
+        "Emission": rec.value
+    } for rec in records])
+
+    if df.empty:
+        st.info("No emissions data available.")
     else:
-        st.info("No emissions data to analyze.")
+        # --- Selection Inputs First ---
+        st.subheader("Select Facility, Year, and Month")
 
+        selected_facility = st.selectbox("Select Facility", ["Choose Facility"] + FACILITIES, key="summary_facility")
+        selected_year = st.number_input("Select Year", min_value=2000, max_value=date.today().year, value=date.today().year, key="summary_year")
+        selected_month = st.selectbox("Select Month", ["Choose Month"] + MONTHS, key="summary_month")
+
+        if selected_facility != "Choose Facility" and selected_month != "Choose Month":
+            # --- Filter dataset based on selection ---
+            df_filtered = df[
+                (df["Facility"] == selected_facility) &
+                (df["Year"] == selected_year) &
+                (df["Month"] == selected_month)
+            ]
+
+            if not df_filtered.empty:
+                # --- Emissions Breakdown ---
+                st.subheader("Emissions Breakdown")
+
+                df_breakdown = df_filtered.groupby("Category")["Emission"].sum().reset_index()
+
+                categories = ["Fossil Fuels", "Fugitive", "Electricity", "Water", "Waste", "Travel"]
+
+                cols = st.columns(3)
+                for idx, category in enumerate(categories):
+                    value = df_breakdown[df_breakdown["Category"] == category]["Emission"].sum()
+                    with cols[idx % 3]:
+                        st.markdown(f"**{category}**")
+                        animated_number(value, format_func=lambda x: f"{x:.2f} kg CO₂e")
+
+                # Totals
+                total_emission = df_filtered["Emission"].sum()
+                offset = 999.91  # Static
+                net_emission = total_emission - offset
+
+                st.divider()
+
+                total_cols = st.columns(3)
+                with total_cols[0]:
+                    st.markdown("**Total Emission (before offset)**")
+                    animated_number(total_emission, format_func=lambda x: f"{x:.2f} kg CO₂e")
+                with total_cols[1]:
+                    st.markdown("**Offset**")
+                    animated_number(offset, format_func=lambda x: f"{x:.2f} kg CO₂e")
+                with total_cols[2]:
+                    st.markdown("**Net Emission**")
+                    animated_number(net_emission, format_func=lambda x: f"{x:.2f} kg CO₂e")
+
+                st.divider()
+
+                # --- Charts and Table ---
+                # Bar Chart
+                st.subheader("📊 Emission Breakdown (Bar Chart)")
+                fig_bar = px.bar(
+                    df_filtered,
+                    x="Category",
+                    y="Emission",
+                    color="Category",
+                    title=f"<b>Emission Breakdown for {selected_facility} - {selected_month} {selected_year}</b>",
+                    text_auto='.2s'
+                )
+                fig_bar.update_layout(
+                    plot_bgcolor="white",
+                    yaxis_title="Emission (kg CO₂)"
+                )
+                st.plotly_chart(fig_bar, use_container_width=True)
+
+                # Pie Chart
+                st.subheader("🥧 Emission Breakdown (Pie Chart)")
+                fig_pie = px.pie(
+                    df_filtered,
+                    names="Category",
+                    values="Emission",
+                    title=f"<b>Emission Distribution for {selected_facility} - {selected_month} {selected_year}</b>",
+                    hole=0.4
+                )
+                fig_pie.update_traces(textinfo="percent+label")
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+                # Table
+                st.subheader("📋 Emission Details Table")
+                st.dataframe(df_filtered.style.format({"Emission": "{:.2f}"}))
+
+            else:
+                st.warning("No emissions data found for the selected facility, year, and month.")
+
+        else:
+            st.info("Please select a facility, year, and month to view emissions.")
+    
 elif menu == "Year and Facility Analysis":
     st.header("Year and Facility Analysis")
     records = db.query(Emission).filter(Emission.user_id==user.id).all()
