@@ -21,7 +21,7 @@ def main():
                     st.session_state["username"] = user.name
                     st.session_state["logged_in"] = True
                 else:
-                    st.error("Invalid usermame or password")
+                    st.error("Invalid username or password")
             else:
                 st.error("Please enter both username and password")
 
