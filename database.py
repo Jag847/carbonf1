@@ -44,10 +44,10 @@ def create_user(name, email, password):
         session.rollback()
         return None
 
-def authenticate(email, password):
+def authenticate(name, password):
     """Check user credentials. Return User if valid, else None."""
     session = Session()
-    user = session.query(User).filter_by(email=email).first()
+    user = session.query(User).filter_by(name=name).first()
     if user and bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
         return user
     return None
